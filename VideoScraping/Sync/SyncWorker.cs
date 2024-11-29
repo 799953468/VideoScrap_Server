@@ -84,6 +84,7 @@ public class SyncWorker
         if (!int.TryParse(episodeValue, out var episodeNum))
         {
             Log.Error($"Cannot parse episode for {path}");
+            return;
         }
 
         SyncEntity.ScraperConfig = new ScraperConfig();

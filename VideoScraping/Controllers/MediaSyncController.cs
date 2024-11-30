@@ -1,12 +1,14 @@
 using Microsoft.AspNetCore.Mvc;
+using Serilog;
 using SqlSugar;
 using VideoScraping.DTO.WebApi;
 using VideoScraping.Entity;
+using VideoScraping.Helper;
 
 namespace VideoScraping.Controllers;
 
 [ApiController]
-[Route("[controller]/[action]")]
+[Route("[controller]")]
 public class MediaSyncController(ILogger<MediaSyncController> logger, ISqlSugarClient databaseClient) : ControllerBase
 {
     [HttpGet(Name = "GetSyncList")]
@@ -14,6 +16,7 @@ public class MediaSyncController(ILogger<MediaSyncController> logger, ISqlSugarC
     {
         RefAsync<int> total = 0;
         var syncList = await databaseClient.Queryable<SyncEntity>()
+            .WithCache()
             .ToPageListAsync(page, pageSize, total);
         return new SyncListResult() { SyncList = syncList, Total = total };
     }
@@ -25,42 +28,54 @@ public class MediaSyncController(ILogger<MediaSyncController> logger, ISqlSugarC
         {
             Name = createSyncDto.Name,
             MoveMethod = createSyncDto.MoveMethod,
-            ScrapDestination = createSyncDto.Destination,
-            ScrapSource = createSyncDto.Source,
+            ScrapDestination = createSyncDto.ScrapSource,
+            ScrapSource = createSyncDto.ScrapDestination,
             TheMovieDbId = createSyncDto.TheMovieDbId,
             Season = createSyncDto.Season,
             GetEpisodeRegular = createSyncDto.GetEpisodeRegular,
-            MinFileSize = createSyncDto.MinFileSize
+            MinFileSize = createSyncDto.MinFileSize,
         };
         await databaseClient.Insertable(sync)
             .ExecuteReturnSnowflakeIdAsync();
-
         return Ok();
     }
 
-    [HttpPost(Name = "UpdateState")]
-    public async Task<ActionResult> UpdateState([FromQuery] long? id)
+    [HttpPut(Name = "UpdateSync")]
+    public async Task<ActionResult> Update([FromBody] CreateSyncDto createSyncDto)
     {
-        if (id == null)
+        try
         {
-            return BadRequest("id cannot be null");
+            var sync = new SyncEntity()
+            {
+                Id = createSyncDto.Id,
+                Name = createSyncDto.Name,
+                MinFileSize = createSyncDto.MinFileSize,
+                TheMovieDbId = createSyncDto.TheMovieDbId,
+                Season = createSyncDto.Season,
+                GetEpisodeRegular = createSyncDto.GetEpisodeRegular,
+                ScrapSource = createSyncDto.ScrapSource,
+                ScrapDestination = createSyncDto.ScrapDestination,
+                IsEnable = createSyncDto.IsEnable,
+                MoveMethod = createSyncDto.MoveMethod,
+                Ver = createSyncDto.Ver
+            };
+            await databaseClient.Updateable(sync)
+                .ExecuteCommandWithOptLockAsync(true);
+            await ServiceLocator.SyncTaskService.UpdateWatcher(sync);
+        }
+        catch (Exception ex)
+        {
+            Log.Error(ex.Message);
+            return BadRequest(ex.Message);
         }
 
-        await databaseClient.Updateable<SyncEntity>()
-            .SetColumns(s => s.IsEnable == !s.IsEnable)
-            .Where(s => s.Id == id)
-            .ExecuteCommandAsync();
         return Ok();
     }
 
     [HttpDelete(Name = "DeleteSync")]
-    public async Task<ActionResult> Delete([FromQuery] long? id)
+    [Route("{id:long}")]
+    public async Task<ActionResult> Delete(long id)
     {
-        if (id == null)
-        {
-            return BadRequest("id cannot be null");
-        }
-
         await databaseClient.Deleteable<SyncEntity>()
             .In(id)
             .ExecuteCommandAsync();

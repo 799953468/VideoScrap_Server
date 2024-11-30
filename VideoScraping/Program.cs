@@ -14,10 +14,11 @@ Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Debug()
     .MinimumLevel.Override("Microsoft", LogEventLevel.Information)
     .Enrich.FromLogContext()
-    .WriteTo.Console()
+    .Enrich.WithThreadId()
+    .Enrich.WithThreadName()
+    .WriteTo.Console(outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{SourceContext}] [{Level:u3}] [{ThreadId}] {Message:lj} {NewLine}{Exception}")
     .CreateBootstrapLogger();
 builder.Host.UseSerilog();
-
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
@@ -29,11 +30,20 @@ builder.Services.AddSingleton<TheMovieDbServer>();
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ISqlSugarClient>(s =>
 {
+    var cache = new SugarCache();
     var sqlSugar = new SqlSugarClient(new ConnectionConfig()
         {
             DbType = DbType.Sqlite,
             ConnectionString = "DataSource=user.db",
-            IsAutoCloseConnection = true
+            IsAutoCloseConnection = true,
+            ConfigureExternalServices = new ConfigureExternalServices()
+            {
+                DataInfoCacheService = cache,
+            },
+            MoreSettings = new ConnMoreSettings()
+            {
+                IsAutoRemoveDataCache = true,
+            }
         },
         db => { db.Aop.OnLogExecuting = (sql, pars) => { Log.Information(sql); }; });
     return sqlSugar;
@@ -47,8 +57,8 @@ ServiceLocator.Instance = app.Services;
 Log.Information("Init Database");
 using (var serviceScope = app.Services.CreateScope())
 {
-    var services = serviceScope.ServiceProvider;
-    var db = services.GetRequiredService<ISqlSugarClient>();
+
+    var db = DatabaseHelper.UserDatabase;
     db.CodeFirst.InitTables<SyncEntity>();
 }
 

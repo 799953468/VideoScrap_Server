@@ -11,12 +11,12 @@ public class CreateSyncDto
     /// <summary>
     /// 路径
     /// </summary>
-    public string Source { get; set; }
+    public string ScrapSource { get; set; }
 
     /// <summary>
     /// 目的地
     /// </summary>
-    public string Destination { get; set; }
+    public string ScrapDestination { get; set; }
 
     /// <summary>
     /// 移动模式
@@ -37,9 +37,19 @@ public class CreateSyncDto
     /// 集数正则
     /// </summary>
     public string? GetEpisodeRegular { get; set; }
-    
+
     /// <summary>
     /// 最小文件大小(MB)
     /// </summary>
-    public int? MinFileSize { get; set; }
+    public int MinFileSize { get; set; } = 200;
+    
+    /// <summary>
+    /// 是否启用
+    /// </summary>
+    public bool IsEnable { get; set; } = true;
+    
+    /// <summary>
+    /// 版本
+    /// </summary>
+    public long Ver { get; set; }
 }

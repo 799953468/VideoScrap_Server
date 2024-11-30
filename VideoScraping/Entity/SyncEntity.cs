@@ -62,12 +62,16 @@ public class SyncEntity
     /// </summary>
     [SugarColumn(ColumnDescription = "获取集数正则，为空直接读取集数", IsNullable = true)]
     public string? GetEpisodeRegular { get; set; }
-    
+
     /// <summary>
     /// 最小文件大小(MB)
     /// </summary>
     [SugarColumn(ColumnDescription = "最小文件大小(MB)")]
-    public int? MinFileSize { get; set; }
+    public int MinFileSize { get; set; }
+    
+    [JsonConverter(typeof(LongToStringConverter))]
+    [SugarColumn(IsEnableUpdateVersionValidation = true)]//标识版本字段
+    public long Ver { get; set; } 
 
     /// <summary>
     /// 刮捎配置

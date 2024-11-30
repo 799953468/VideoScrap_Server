@@ -62,6 +62,12 @@ public class SyncEntity
     /// </summary>
     [SugarColumn(ColumnDescription = "获取集数正则，为空直接读取集数", IsNullable = true)]
     public string? GetEpisodeRegular { get; set; }
+    
+    /// <summary>
+    /// 集偏移
+    /// </summary>
+    [SugarColumn(IsNullable = true, ColumnDescription = "集偏移")]
+    public int? EpisodeOffset { get; set; }
 
     /// <summary>
     /// 最小文件大小(MB)

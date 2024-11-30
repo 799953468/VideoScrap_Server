@@ -57,6 +57,11 @@ public class SyncTaskService(ILogger<SyncTaskService> logger) : IHostedService, 
     private void WatcherOnCreated(SyncEntity syncEntity, FileSystemEventArgs e)
     {
         var fileInfo = new FileInfo(e.FullPath);
+        if (!fileInfo.Exists)
+        {
+            return;
+        }
+
         if (fileInfo.Length < syncEntity.MinFileSize * 1024 * 1024)
         {
             logger.LogInformation("[Watcher] File {path} 大小小于 {minSize} MB, 跳过...", e.FullPath, syncEntity.MinFileSize);
@@ -97,7 +102,7 @@ public class SyncTaskService(ILogger<SyncTaskService> logger) : IHostedService, 
         logger.LogInformation("[Watcher] 停止监控...");
     }
 
-    public async Task UpdateWatcher(SyncEntity syncEntity)
+    public void UpdateWatcher(SyncEntity syncEntity)
     {
         foreach (var syncWatcher in _syncWatcher)
         {
@@ -117,6 +122,11 @@ public class SyncTaskService(ILogger<SyncTaskService> logger) : IHostedService, 
         watcher.IncludeSubdirectories = true;
         _syncWatcher.Add(syncEntity, watcher);
         logger.LogInformation("[Watcher] {Name} 开始监控目录...", syncEntity.Name);
+    }
+
+    public List<(FileInfo, SyncEntity)> GetSyncQueue()
+    {
+        return _syncQueue.ToList();
     }
 
     public void Dispose()
@@ -155,6 +165,11 @@ public class SyncTaskService(ILogger<SyncTaskService> logger) : IHostedService, 
         {
             logger.LogError("Cannot parse episode for {path}", path);
             return;
+        }
+
+        if (syncEntity.EpisodeOffset != null)
+        {
+            episodeNum += syncEntity.EpisodeOffset.Value;
         }
 
         syncEntity.ScraperConfig = new ScraperConfig();

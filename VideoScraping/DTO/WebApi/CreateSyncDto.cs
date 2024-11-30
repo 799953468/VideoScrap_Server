@@ -34,6 +34,11 @@ public class CreateSyncDto
     public int Season { get; set; }
     
     /// <summary>
+    /// 集偏移
+    /// </summary>
+    public int? EpisodeOffset { get; set; }
+    
+    /// <summary>
     /// 集数正则
     /// </summary>
     public string? GetEpisodeRegular { get; set; }

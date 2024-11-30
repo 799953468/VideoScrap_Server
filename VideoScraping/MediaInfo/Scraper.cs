@@ -212,7 +212,7 @@ public class Scraper
             return;
         }
 
-        Log.Information($"[Scraper] 正在生成季NFO文件: {outPath}season.nfo");
+        Log.Information($"[Scraper] 正在生成季NFO文件: {outPath}/season.nfo");
         var seasonNfo = new SeasonDetailNFO()
         {
             SeasonNumber = seasonDetails.SeasonNumber,

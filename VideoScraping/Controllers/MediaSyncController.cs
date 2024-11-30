@@ -28,9 +28,10 @@ public class MediaSyncController(ILogger<MediaSyncController> logger, ISqlSugarC
         {
             Name = createSyncDto.Name,
             MoveMethod = createSyncDto.MoveMethod,
-            ScrapDestination = createSyncDto.ScrapSource,
-            ScrapSource = createSyncDto.ScrapDestination,
+            ScrapDestination = createSyncDto.ScrapDestination,
+            ScrapSource = createSyncDto.ScrapSource,
             TheMovieDbId = createSyncDto.TheMovieDbId,
+            EpisodeOffset = createSyncDto.EpisodeOffset,
             Season = createSyncDto.Season,
             GetEpisodeRegular = createSyncDto.GetEpisodeRegular,
             MinFileSize = createSyncDto.MinFileSize,
@@ -52,6 +53,7 @@ public class MediaSyncController(ILogger<MediaSyncController> logger, ISqlSugarC
                 MinFileSize = createSyncDto.MinFileSize,
                 TheMovieDbId = createSyncDto.TheMovieDbId,
                 Season = createSyncDto.Season,
+                EpisodeOffset = createSyncDto.EpisodeOffset,
                 GetEpisodeRegular = createSyncDto.GetEpisodeRegular,
                 ScrapSource = createSyncDto.ScrapSource,
                 ScrapDestination = createSyncDto.ScrapDestination,
@@ -61,11 +63,11 @@ public class MediaSyncController(ILogger<MediaSyncController> logger, ISqlSugarC
             };
             await databaseClient.Updateable(sync)
                 .ExecuteCommandWithOptLockAsync(true);
-            await ServiceLocator.SyncTaskService.UpdateWatcher(sync);
+            ServiceLocator.SyncTaskService.UpdateWatcher(sync);
         }
         catch (Exception ex)
         {
-            Log.Error(ex.Message);
+            logger.LogError("{error}", ex.Message);
             return BadRequest(ex.Message);
         }
 

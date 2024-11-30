@@ -158,7 +158,7 @@ public class SyncTaskService(ILogger<SyncTaskService> logger) : IHostedService, 
         else
         {
             var regex = new Regex(syncEntity.GetEpisodeRegular);
-            episodeValue = regex.Match(path).Value;
+            episodeValue = regex.Match(Path.GetFileNameWithoutExtension(path)).Value;
         }
 
         if (!int.TryParse(episodeValue, out var episodeNum))

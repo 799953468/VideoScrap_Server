@@ -13,9 +13,11 @@ public class Fanart
     private const string FanartMovieApiUrl = "https://webservice.fanart.tv/v3/movies/";
     private const string FanartTvApiUrl = "https://webservice.fanart.tv/v3/tv/";
     private TVImages _tvImages = new();
+    private readonly ILogger<Fanart> _logger;
 
     public Fanart()
     {
+        _logger = ServiceLocator.Instance.GetRequiredService<ILogger<Fanart>>();
         _cacheManager = ServiceLocator.Instance.GetRequiredService<CacheManager>();
     }
 
@@ -31,15 +33,21 @@ public class Fanart
             requestUrl = $"{FanartTvApiUrl}{id}?api_key={ApiKey}";
         }
 
-        Log.Information(requestUrl);
-
         _tvImages = _cacheManager.GetOrCreate($"{mediaType.ToString()}.{id}", () =>
         {
             return Task.Run(async () =>
             {
-                var response = await _httpClient.GetAsync(requestUrl);
-                response.EnsureSuccessStatusCode();
-                return await response.Content.ReadFromJsonAsync<TVImages>() ?? new TVImages();
+                try
+                {
+                    var response = await _httpClient.GetAsync(requestUrl);
+                    response.EnsureSuccessStatusCode();
+                    return await response.Content.ReadFromJsonAsync<TVImages>() ?? new TVImages();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex.Message);
+                    return new TVImages();
+                }
             }).Result;
         });
     }

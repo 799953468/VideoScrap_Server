@@ -1,5 +1,4 @@
 using System.Xml.Serialization;
-using Serilog;
 using VideoScraping.DTO;
 using VideoScraping.DTO.NFO;
 using VideoScraping.DTO.TheMovieDb;
@@ -16,6 +15,7 @@ public class Scraper
     private readonly CacheManager _cacheManager;
     private readonly Fanart _fanart = new Fanart();
     private readonly int _episode;
+    private readonly ILogger<Scraper> _logger;
 
     public Scraper(SyncEntity syncEntity, int episode)
     {
@@ -23,24 +23,25 @@ public class Scraper
         _episode = episode;
         TheMovieDbServer = ServiceLocator.Instance.GetRequiredService<TheMovieDbServer>();
         _cacheManager = ServiceLocator.Instance.GetRequiredService<CacheManager>();
+        _logger = ServiceLocator.Instance.GetRequiredService<ILogger<Scraper>>();
     }
 
     public async Task FileScraper(string filePath)
     {
         if (!File.Exists(filePath))
         {
-            Log.Warning("文件不存在");
+            _logger.LogWarning("文件不存在");
             return;
         }
 
         var path = _syncEntity.ScrapDestination;
-        Log.Information($"[Scraper] 开始刮捎: {filePath}...");
+        _logger.LogInformation("开始刮捎: {path}...", filePath);
         try
         {
             var tvShowInfo = _cacheManager.GetOrCreate($"tvshowInfo.{_syncEntity.TheMovieDbId.ToString()}", () => TheMovieDbServer.GetTvShowInfo(_syncEntity.TheMovieDbId).Result);
             if (tvShowInfo == null)
             {
-                Log.Warning($"[Scraper] 未找到 {_syncEntity.TheMovieDbId} 的信息");
+                _logger.LogWarning("未找到 {id} 的信息", _syncEntity.TheMovieDbId);
                 return;
             }
 
@@ -140,22 +141,22 @@ public class Scraper
                     var newFilePath = Path.Combine(path, fileName + Path.GetExtension(filePath));
                     if (_syncEntity.MoveMethod == MoveMethod.Copy)
                     {
-                        Log.Information($"[Scrapper] Copy {filePath} to {newFilePath}");
+                        _logger.LogInformation("Copy {path} to {newFilePath}", filePath, newFilePath);
                         File.Copy(filePath, newFilePath, false);
                     }
                     else
                     {
-                        Log.Information($"[Scrapper] Move {filePath} to {newFilePath}");
+                        _logger.LogInformation("Move {filePath} to {newFilePath}", filePath, newFilePath);
                         File.Move(filePath, newFilePath);
                     }
                 }
             }
 
-            Log.Information($"[Scraper] 刮捎完成");
+            _logger.LogInformation("刮捎完成");
         }
         catch (Exception e)
         {
-            Log.Error(e.Message);
+            _logger.LogError(e.Message);
         }
     }
 
@@ -171,7 +172,7 @@ public class Scraper
             return;
         }
 
-        Log.Information($"[Scraper] 正在生成电视剧NFO文件：{outPath}tvshow.nfo");
+        _logger.LogInformation("正在生成电视剧NFO文件：{outPath}tvshow.nfo", outPath);
         var scraperInfo = new TvshowDetailNFO()
         {
             DateAdded = DateTime.Now.ToString("yyyy-M-d HH:mm:ss")
@@ -212,7 +213,7 @@ public class Scraper
             return;
         }
 
-        Log.Information($"[Scraper] 正在生成季NFO文件: {outPath}/season.nfo");
+        _logger.LogInformation("正在生成季NFO文件: {outPath}/season.nfo", outPath);
         var seasonNfo = new SeasonDetailNFO()
         {
             SeasonNumber = seasonDetails.SeasonNumber,
@@ -240,7 +241,7 @@ public class Scraper
     private async Task GenTvEpisodeInfo(EpisodesDetails episodesDetails, string outPath, string tvShowName)
     {
         var fileName = tvShowName + ".nfo";
-        Log.Information($"[Scraper] 正在生成剧集NFO文件：{fileName}");
+        _logger.LogInformation("正在生成剧集NFO文件：{fileName}", fileName);
         var nfo = new EpisodeDetailsNFO();
         // 添加时间
         nfo.DateAdded = DateTime.Now.ToString("yyyy-M-d HH:mm:ss");
@@ -323,16 +324,16 @@ public class Scraper
             return;
         }
 
-        Log.Information($"[Scraper] 正在下载{type}图片: {url}");
+        _logger.LogInformation("正在下载{type}图片: {url}", type, url);
         var fileData = await DownloadHelper.DownloadFileAsBinaryAsync(new Uri(url));
         if (fileData == null)
         {
-            Log.Error($"[Scraper] {type}图片下载失败，请检查网络连通性");
+            _logger.LogError("{type}图片下载失败，请检查网络连通性", type);
             return;
         }
 
         await using var fs = new FileStream(imagePath, FileMode.OpenOrCreate);
         await fs.WriteAsync(fileData);
-        Log.Information($"[Scraper] {type}图片已保存：{imagePath}");
+        _logger.LogInformation("{type}图片已保存：{imagePath}", type, imagePath);
     }
 }
